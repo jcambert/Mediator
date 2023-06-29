@@ -4,7 +4,7 @@
 
 #pragma warning disable CS8019 // Unused usings
 #pragma warning disable CS8321 // Unused local function
-
+using {{ MediatorNamespace }};
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using System.Linq;
@@ -17,10 +17,33 @@ namespace Microsoft.Extensions.DependencyInjection
     /// DI extensions for Mediator.
     /// </summary>
     [global::System.CodeDom.Compiler.GeneratedCode("Mediator.SourceGenerator", "{{ GeneratorVersion }}")]
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.Diagnostics.DebuggerStepThroughAttribute]
+   // [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    //[global::System.Diagnostics.DebuggerStepThroughAttribute]
     public static class MediatorDependencyInjectionExtensions
     {
+        internal sealed class Dummy { }
+
+        {{~ if AsLibrary  ~}}
+        public static IServiceCollection AddRequestHandler<TQuery, TResponse, THandler>(this IServiceCollection services,ServiceLifetime serviceLifetime={{ ServiceLifetime }})
+        where TQuery : class,IRequest<TResponse>
+        where THandler : class,IRequestHandler<TQuery,TResponse>
+        {
+            services.TryAdd(new ServiceDescriptor(typeof(THandler), typeof(THandler),serviceLifetime));
+            services.Add(new ServiceDescriptor(
+                   typeof(RequestClassHandlerWrapper<TQuery, TResponse>),
+                   sp =>
+                   {
+                       return new RequestClassHandlerWrapper<TQuery, TResponse>(
+                           sp.GetRequiredService<THandler>(),
+                           sp.GetServices<IPipelineBehavior<TQuery, TResponse>>()
+                       );
+                   },
+                   serviceLifetime
+               ));
+            return services;
+        }
+        {{~ end ~}}
+        {{~ if !AsLibrary  ~}}
         /// <summary>
         /// Adds the Mediator implementation and handlers of your application.
         /// </summary>
@@ -29,7 +52,6 @@ namespace Microsoft.Extensions.DependencyInjection
             return AddMediator(services, null);
         }
 
-        internal sealed class Dummy { }
 
         /// <summary>
         /// Adds the Mediator implementation and handlers of your application, with specified options.
@@ -61,7 +83,7 @@ namespace Microsoft.Extensions.DependencyInjection
             services.TryAdd(new SD(typeof(global::Mediator.ISender), sp => sp.GetRequiredService<global::{{ MediatorNamespace }}.Mediator>(), {{ SingletonServiceLifetime }}));
             services.TryAdd(new SD(typeof(global::Mediator.IPublisher), sp => sp.GetRequiredService<global::{{ MediatorNamespace }}.Mediator>(), {{ SingletonServiceLifetime }}));
             {{~ end ~}}
-
+#region Request Message Handling
             {{~ for message in RequestMessages ~}}
             {{ message.Handler.ServiceRegistrationBlock }}
             services.Add(new SD(
@@ -76,6 +98,7 @@ namespace Microsoft.Extensions.DependencyInjection
                 {{ message.Handler.ServiceLifetime }}
             ));
             {{~ end ~}}
+            #endregion
 
             {{~ for handler in NotificationMessageHandlers ~}}
             {{ handler.ServiceRegistrationBlock }}
@@ -100,6 +123,7 @@ namespace Microsoft.Extensions.DependencyInjection
             static global::System.Func<global::System.IServiceProvider, T> GetRequiredService<T>() where T : notnull => sp => sp.GetRequiredService<T>();
 			{{~ end ~}}
         }
+        {{~ end ~}}
     }
 }
 
@@ -109,7 +133,7 @@ namespace {{ MediatorNamespace }}
     [global::System.CodeDom.Compiler.GeneratedCode("Mediator.SourceGenerator", "{{ GeneratorVersion }}")]
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.Diagnostics.DebuggerStepThroughAttribute]
-    internal sealed class {{ wrapperType.ClassHandlerWrapperTypeNameWithGenericTypeArguments }}
+    public sealed class {{ wrapperType.ClassHandlerWrapperTypeNameWithGenericTypeArguments }}
         where TRequest : class, global::Mediator.I{{ wrapperType.MessageType }}<TResponse>
     {
         private readonly {{ wrapperType.MessageHandlerDelegateName }} _rootHandler;
@@ -137,7 +161,7 @@ namespace {{ MediatorNamespace }}
     [global::System.CodeDom.Compiler.GeneratedCode("Mediator.SourceGenerator", "{{ GeneratorVersion }}")]
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.Diagnostics.DebuggerStepThroughAttribute]
-    internal sealed class {{ wrapperType.StructHandlerWrapperTypeNameWithGenericTypeArguments }}
+    public sealed class {{ wrapperType.StructHandlerWrapperTypeNameWithGenericTypeArguments }}
         where TRequest : struct, global::Mediator.I{{ wrapperType.MessageType }}<TResponse>
     {
         private readonly {{ wrapperType.MessageHandlerDelegateName }} _rootHandler;
@@ -164,6 +188,7 @@ namespace {{ MediatorNamespace }}
     }
     {{~ end ~}}
 
+    {{~ if !AsLibrary  ~}}
     /// <summary>
     /// Generated code for Mediator implementation.
     /// This type is also registered as a DI service.
@@ -897,4 +922,5 @@ namespace {{ MediatorNamespace }}
             }
         }
     }
+    {{~ end ~}}
 }

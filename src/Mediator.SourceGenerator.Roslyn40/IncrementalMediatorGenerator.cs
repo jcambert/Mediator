@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Diagnostics;
 
 namespace Mediator.SourceGenerator;
 
@@ -37,6 +38,13 @@ public sealed class IncrementalMediatorGenerator : IIncrementalGenerator
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
+        /*#if DEBUG
+                if (!Debugger.IsAttached)
+                {
+                    Debugger.Launch();
+                    Debugger.Break();
+                }
+        #endif*/
         context.RegisterPostInitializationOutput(
             static context =>
             {

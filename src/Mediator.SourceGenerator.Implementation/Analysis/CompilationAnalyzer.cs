@@ -837,6 +837,12 @@ internal sealed class CompilationAnalyzer
                 if (!string.IsNullOrWhiteSpace(namespaceArg))
                     MediatorNamespace = namespaceArg!;
             }
+            else if (attrFieldName == "AsLibrary")
+            {
+                bool? asLibraryArg =
+                    semanticModel.GetConstantValue(attrArg.Expression, cancellationToken).Value as bool?;
+                AsLibrary = asLibraryArg! ?? false;
+            }
         }
 
         ConfiguredViaAttribute = true;
@@ -1056,4 +1062,6 @@ internal sealed class CompilationAnalyzer
         var diagnostic = del(in _context);
         HasErrors |= diagnostic.Severity == DiagnosticSeverity.Error;
     }
+
+    public bool AsLibrary { get; private set; } = false;
 }
